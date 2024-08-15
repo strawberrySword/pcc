@@ -1,14 +1,11 @@
-#include <arpa/inet.h>
-#include <assert.h>
-#include <errno.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
+#include <signal.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <signal.h>
 
 #define BUF_LEN 1024 * 1024 - 1
 #define REDABLE_MIN 32
