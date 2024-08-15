@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     else
     {
         perror("stat");
-        return 1;
+        exit(1);
     }
 
     struct sockaddr_in serv_addr;
@@ -71,21 +71,20 @@ int main(int argc, char *argv[])
     char *data = (char *)&conv;
     int left = sizeof(conv);
     int ofs;
-    do
+    while (left > 0)
     {
-        if ((ofs = write(sockfd, data, left)) < 0)
+        if ((ofs = write(sockfd, data, left)) <= 0)
         {
-            if (errno != EINTR)
-            {
-                return -1; // TODO handle error correctly (as in ass)
-            }
+            perror("Failed wrinting to server\n");
+            close(sockfd);
+            exit(1);
         }
         else
         {
             data += ofs;
             left -= ofs;
         }
-    } while (left > 0); // we do this as a do while because we need to send N even if it is 0
+    }
 
     // ---- write DATA to server
     ssize_t totalsent = 0;
@@ -95,13 +94,20 @@ int main(int argc, char *argv[])
     while (notwritten > 0)
     {
         // copy BUF_LEN bytes from file to buffer:
-        size = read(datafd, data_buffer, BUF_LEN);
+        size = read(datafd, data_buffer + totalsent, BUF_LEN);
         data_buffer[size + 1] = '\0'; /*to make sure*/
-        ssize_t nsent = write(sockfd, data_buffer, size);
+        ssize_t nsent = write(sockfd, data_buffer + totalsent, size);
+        if (nsent <= 0)
+        {
+            perror("Failed sending data to server \n");
+            close(sockfd);
+            exit(1);
+        }
 
         totalsent += nsent;
         notwritten -= nsent;
     }
+    close(datafd);
     // ---- read C from server
     uint32_t C;
     ssize_t total_recieved = 0;
@@ -110,12 +116,20 @@ int main(int argc, char *argv[])
     while (not_recieved > 0)
     {
         ssize_t bytes_read = read(sockfd, &C + total_recieved, not_recieved);
-        // TODO error handling
-        total_recieved += bytes_read;
-        not_recieved -= bytes_read;
+        if (bytes_read <= 0)
+        {
+            perror("Failed reading data from server \n");
+            close(sockfd);
+            exit(1);
+        }
+        else
+        {
+            total_recieved += bytes_read;
+            not_recieved -= bytes_read;
+        }
     }
     C = ntohl(C);
 
     close(sockfd);
-    return 0;
+    exit(0);
 }
